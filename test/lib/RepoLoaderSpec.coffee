@@ -11,10 +11,8 @@ describe "RepoLoader", ->
 	mongodb = dependencies.mongodb;
 
 	Repositories = mongodb.collection("Repositories")
+	repoLoader = new RepoLoader settings.github
 
 	it "should work", ->
-		Promise.bind(@)
-		.then -> Repositories.insert
-			name: "Test"
-		.then -> Repositories.find({}).count()
-		.then -> console.log arguments
+		repoLoader.getRepositories (repos) ->
+			console.log "Got #{repos.length}"
