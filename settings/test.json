@@ -1,0 +1,20 @@
+{
+  "isDebug": true,
+  "logger": {
+    "transports": {
+      "Console": {
+        "silent": false,
+        "level": "verbose",
+        "handleExceptions": false,
+        "prettyPrint": true,
+        "colorize": true,
+        "showLevel": false
+      }
+    }
+  },
+  "mongodb": {
+    "url": "mongodb://localhost/%database%"
+  },
+  "cron": {
+  }
+}
