@@ -1,10 +1,15 @@
 https = require 'https'
 Promise = require 'bluebird'
 _ = require 'underscore'
+RepositoriesClass = require './model/Repositories.coffee'
 
 module.exports = class
-	constructor: (settings) ->
+	constructor: (settings, dependencies) ->
 		@settings = settings
+		@Repositories = new RepositoriesClass(dependencies.mongodb)
+		
+	syncRepositories: ->
+		@getRepositories (repositories) => Promise.all(@Repositories.upsert repository for repository in repositories)
 
 	getRepositories: (handler) ->
 		@_request {path: '/repositories'}, handler
