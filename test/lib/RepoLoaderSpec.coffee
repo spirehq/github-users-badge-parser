@@ -4,7 +4,6 @@ createDependencies = require '../../helper/dependencies'
 settings = (require '../../core/helper/settings')("#{process.env.ROOT_DIR}/settings/test.json")
 
 RepoLoader = require '../stub/RepoLoaderStub.coffee'
-RepositoriesClass = require '../../lib/model/Repositories.coffee'
 
 describe 'RepoLoader', ->
 	dependencies = createDependencies(settings, 'RepoLoader')
@@ -14,7 +13,6 @@ describe 'RepoLoader', ->
 	RepositoriesCollection = mongodb.collection("Repositories")
 
 	repoLoader = new RepoLoader settings.github, dependencies
-	Repositories = new RepositoriesClass(mongodb)
 
 	beforeEach ->
 		Promise.bind @
