@@ -1,6 +1,6 @@
 RepoLoader = require '../../lib/RepoLoader.coffee'
 
-MAX_PAGES  = 3
+MAX_PAGES = 10
 
 module.exports = class extends RepoLoader
 	constructor: ->

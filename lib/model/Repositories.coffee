@@ -1,5 +1,6 @@
 Promise = require 'bluebird'
 Match = require 'mtr-match'
+_ = require 'underscore'
 
 module.exports = class
 	constructor: (mongodb) ->
@@ -17,10 +18,13 @@ module.exports = class
 		@collection.insert object
 
 	update: (object) ->
-		@collection.update {url: object.url}, {$set: {updatedAt: new Date()}}
+		@collection.update @_getSelector(object), {$set: {updatedAt: new Date()}}
 
 	findByObject: (object) ->
-		@collection.findOne {url: object.url}
+		@collection.findOne @_getSelector object
+
+	_getSelector: (object) ->
+		_.pick object, 'url', 'manager'
 
 	buildObject: (data) ->
 		Match.check data, Match.ObjectIncluding

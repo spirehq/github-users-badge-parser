@@ -2,15 +2,25 @@ https = require 'https'
 Promise = require 'bluebird'
 _ = require 'underscore'
 RepositoriesClass = require './model/Repositories.coffee'
+Npm = require './package/Npm.coffee'
 
 module.exports = class
 	constructor: (settings, dependencies) ->
 		@settings = settings
 		@Repositories = new RepositoriesClass(dependencies.mongodb)
+		@handlers = [
+			new Npm(dependencies)
+		]
 		
 	syncRepositories: ->
-		@getRepositories (repositories) => Promise.all(@Repositories.upsert repository for repository in repositories)
+		@getRepositories (repositories) => Promise.resolve(repositories).bind(@).map @handleRepository
 
+	handleRepository: (repository) ->
+		Promise.all [
+			@Repositories.upsert repository
+			Promise.all(handler.run repository for handler in @handlers)
+		]
+			
 	getRepositories: (handler) ->
 		@_request {path: '/repositories'}, handler
 
@@ -33,13 +43,10 @@ module.exports = class
 			, (response) =>
 				next = @_getNextRepositoryPage response, handler
 				accumulator = ''
-				response.on 'data', (chunk) => accumulator += chunk
-				response.on 'end', =>
+				response.on 'data', (chunk) -> accumulator += chunk
+				response.on 'end', ->
 					accumulator = JSON.parse accumulator
 					resolve Promise.join(handler(accumulator), next)
 
-			request.on 'error', (e) ->
-				console.error e
-				reject {error: e}
-
+			request.on 'error', (error) -> console.error error; reject {error}
 			request.end()
