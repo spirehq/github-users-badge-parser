@@ -23,6 +23,7 @@
     "coffee-script": "^1.9.3",
     "mocha": "=2.1.0",
     "nock": "^2.7.0",
+    "should": "^8.3.1",
     "sinon": "^1.15.4",
     "sinon-chai": "^2.8.0"
   },

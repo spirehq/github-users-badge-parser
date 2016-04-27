@@ -17,9 +17,8 @@ module.exports = class
 		.then -> @_getPackageFile repository
 		.then (content) ->
 			if content
-				@Packages.upsert {manager: MANAGER, url: repository.html_url}
-
 				content = JSON.parse content
+				@Packages.upsert {name: content['name'], manager: MANAGER, url: repository.html_url}
 				packages = _.union _.keys(content['dependencies']), _.keys(content['devDependencies'])
 				@Files.upsert
 					name: FILE

@@ -2,4 +2,5 @@
 --recursive
 --ui bdd
 --require test/mocha.coffee
+--require should test/*/*Spec.coffee
 --compilers coffee:coffee-script/register

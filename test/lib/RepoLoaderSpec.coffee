@@ -48,6 +48,8 @@ describe 'RepoLoader', ->
 				.then -> repoLoader.syncRepositories()
 				.then -> PackagesCollection.find().count()
 				.then (count) -> count.should.be.equal 1
+				.then -> PackagesCollection.findOne()
+				.then (pack) -> should.exist(pack.name) and pack.name.should.be.equal 'maphilight'
 				.then @assertScopesFinished
 				.then resolve
 				.catch reject

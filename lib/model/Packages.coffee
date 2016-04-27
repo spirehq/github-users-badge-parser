@@ -18,7 +18,7 @@ module.exports = class
 		@collection.insert object
 
 	update: (object) ->
-		@collection.update @_getSelector(object), {$set: {updatedAt: new Date()}}
+		@collection.update @_getSelector(object), {$set: {name: object.name, updatedAt: new Date()}}
 
 	findByObject: (object) ->
 		@collection.findOne @_getSelector object
@@ -28,11 +28,12 @@ module.exports = class
 
 	buildObject: (data) ->
 		Match.check data, Match.ObjectIncluding
+			name: String
 			manager: String
 			url: String
 
 		now = new Date()
 
-		_.extend _.pick(data, 'manager', 'url'),
+		_.extend _.pick(data, 'name', 'manager', 'url'),
 			createdAt: now
 			updatedAt: now
