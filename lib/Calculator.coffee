@@ -24,4 +24,4 @@ module.exports = class
 		.then -> @Repositories.update repository
 
 	calculateForPackage: (pack) ->
-		@FilesCollection.count {packages: pack.name, manager: pack.manager}
+		@FilesCollection.count {manager: pack.manager, packages: pack.name}
