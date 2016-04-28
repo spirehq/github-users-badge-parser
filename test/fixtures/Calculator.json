@@ -1,0 +1,54 @@
+{
+  "Repositories": [
+    {
+      "url": "http://test.com",
+      "users": 0
+    },
+    {
+      "url": "http://test2.com",
+      "users": 0
+    }
+  ],
+  "Packages": [
+    {
+      "url": "http://test.com",
+      "name": "test",
+      "manager": "npm"
+    },
+    {
+      "url": "http://test.com",
+      "name": "test",
+      "manager": "composer"
+    },
+    {
+      "url": "http://test2.com",
+      "name": "test2",
+      "manager": "npm"
+    },
+    {
+      "url": "http://test2.com",
+      "name": "test2",
+      "manager": "composer"
+    }
+  ],
+  "Files": [
+    {
+      "url": "http://test.com",
+      "name": "packages.json",
+      "manager": "npm",
+      "packages": ["test2", "test3"]
+    },
+    {
+      "url": "http://test.com",
+      "name": "composer.json",
+      "manager": "composer",
+      "packages": ["test2"]
+    },
+    {
+      "url": "http://test2.com",
+      "name": "packages.json",
+      "manager": "npm",
+      "packages": ["test", "test3"]
+    }
+  ]
+}

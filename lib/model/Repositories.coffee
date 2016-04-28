@@ -18,7 +18,9 @@ module.exports = class
 		@collection.insert object
 
 	update: (object) ->
-		@collection.update @_getSelector(object), {$set: {updatedAt: new Date()}}
+		modifier = {$set: {updatedAt: new Date()}}
+		modifier.$set.users = object.users if object.users 
+		@collection.update @_getSelector(object), modifier
 
 	findByObject: (object) ->
 		@collection.findOne @_getSelector object
