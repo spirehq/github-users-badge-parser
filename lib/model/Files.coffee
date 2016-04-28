@@ -7,6 +7,9 @@ module.exports = class
 		@mongodb = mongodb
 		@collection = mongodb.collection("Files")
 
+	init: ->
+		@collection.ensureIndex {manager: 1, packages: 1}
+
 	upsert: (raw) ->
 		object = @buildObject raw
 

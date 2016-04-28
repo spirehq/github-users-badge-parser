@@ -7,6 +7,9 @@ module.exports = class
 		@mongodb = mongodb
 		@collection = mongodb.collection("Repositories")
 
+	init: ->
+		@collection.ensureIndex {url: 1}
+		
 	upsert: (raw) ->
 		object = @buildObject raw
 
@@ -26,7 +29,7 @@ module.exports = class
 		@collection.findOne @_getSelector object
 
 	_getSelector: (object) ->
-		_.pick object, 'url', 'manager'
+		_.pick object, 'url'
 
 	buildObject: (data) ->
 		Match.check data, Match.ObjectIncluding
