@@ -8,6 +8,7 @@ promiseRetry = require 'promise-retry'
 module.exports = class
 	constructor: (settings, dependencies) ->
 		@settings = settings
+		@logger = dependencies.logger
 		@Repositories = new RepositoriesClass(dependencies.mongodb)
 		@handlers = [
 			new Npm(dependencies)
@@ -30,8 +31,9 @@ module.exports = class
 		link = response.headers.link
 
 		if link
-			console.log link
 			url = link.match(/^<.+(\/repositories.+)>; rel="next"/)[1]
+			@logger.info "RepoLoader:processing", url
+#			console.log new Date(), url
 			@_request {path: url}, handler if url
 
 	_request: (options, handler) ->

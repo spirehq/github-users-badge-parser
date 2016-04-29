@@ -1,21 +1,7 @@
 {
   "isDebug": true,
-  "logger": {
-    "transports": {
-      "Console": {
-        "silent": false,
-        "level": "verbose",
-        "handleExceptions": false,
-        "prettyPrint": true,
-        "colorize": true,
-        "showLevel": false
-      }
-    }
-  },
   "mongodb": {
     "url": "mongodb://localhost/%database%"
-  },
-  "cron": {
   },
   "github": {
     "token": "408085708694502b0b29914748ab8e072c528c9f"

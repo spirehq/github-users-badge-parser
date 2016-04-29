@@ -1,0 +1,16 @@
+{
+  "isDebug": false,
+  "logger": {
+    "transports": {
+      "Console": {
+        "silent": false,
+        "level": "verbose",
+        "handleExceptions": false,
+        "prettyPrint": true,
+        "colorize": true,
+        "showLevel": false,
+        "timestamp": true
+      }
+    }
+  }
+}
