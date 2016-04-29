@@ -1,9 +1,27 @@
 #!/usr/bin/env coffee
 
 _ = require 'underscore'
+path = require "path"
+yargs = require "yargs"
 Promise = require 'bluebird'
 createDependencies = require '../helper/dependencies'
-settings = (require '../core/helper/settings')("settings/test.json")
+settingsLoader = require "../core/helper/settings"
+
+Promise.longStackTraces() # slows down execution but simplifies debugging
+
+argv = yargs
+  .usage('Usage: $0 [options]')
+  .options(
+    "s":
+      alias: "settings"
+      type: "string"
+      description: "Settings for dependencies (SWF binding, logger, etc)"
+      demand: true
+  )
+  .strict()
+  .argv
+
+settings = settingsLoader path.resolve(process.cwd(), argv.settings)
 
 RepoLoader = require '../lib/RepoLoader.coffee'
 Calculator = require '../lib/Calculator.coffee'

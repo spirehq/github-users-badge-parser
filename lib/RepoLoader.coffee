@@ -32,7 +32,7 @@ module.exports = class
 
 		if link
 			url = link.match(/^<.+(\/repositories.+)>; rel="next"/)[1]
-			@logger.info "RepoLoader:processing", process.memoryUsage().rss, url
+			@logger.info "RepoLoader:processing", url, "(memory usage: #{process.memoryUsage().rss} bytes)"
 #			console.log new Date(), url
 			@_request {path: url}, handler if url
 
