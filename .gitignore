@@ -2,5 +2,6 @@ node_modules
 wallaby.local.js
 test/config.json
 settings-specific
-settings/*.specific.json
+#settings/*.specific.json
 settings/*.local.json
+merged-settings.json
