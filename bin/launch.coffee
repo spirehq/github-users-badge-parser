@@ -1,3 +1,5 @@
+#!/usr/bin/env coffee
+
 _ = require 'underscore'
 Promise = require 'bluebird'
 createDependencies = require '../helper/dependencies'
