@@ -28,7 +28,7 @@ module.exports = class
 				.catch (e) -> console.log "Error in Npm module. Skip this repository", e, content
 
 	parse: (data) ->
-		data = data.replace(/,(\s*)]/, '$1]') # fix trailing comma for arrays (unable to parse it!)
+		data = data.replace(/,(\s*)(]|})/g, '$1$2') # fix trailing comma for arrays/objects (unable to parse it!)
 		Promise.try -> JSON.parse data
 
 	updatePackage: (repository, content) ->
