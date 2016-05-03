@@ -32,9 +32,11 @@ module.exports = class
 		.then -> @Repositories.find().limit(@limit).skip(@skip)
 		.map @handleRepository
 		.then (results) ->
-			return if not results.length
 			@skip += @limit
-			process.nextTick => @run()
+			if results.length
+				process.nextTick => @run()
+			else
+				process.exit(0)
 
 	handleRepository: (repository) ->
 		Promise.bind @
