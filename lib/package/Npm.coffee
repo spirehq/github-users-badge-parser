@@ -56,10 +56,14 @@ module.exports = class
 	_requestAsync: (options) ->
 		requestAsync(options)
 		.spread (response, body) ->
+			console.log response.headers
 			switch response.statusCode
 				when 200
 					return body
 				when 404
 					return ""
 				else
-					throw new Exception("Npm: request error, status code: #{response.statusCode}")
+					@logger.error "Npm: request error, status code: #{response.statusCode}"
+					@logger.error response.headers
+					@logger.error body
+					throw new Error()
