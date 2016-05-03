@@ -53,8 +53,6 @@ module.exports = class
 			'(none)'
 			'https:///(none)'
 			'https:///%20rep'
-			'http:///%22http///github.com/19940608/partof%22'
-			'https:///%22http///github.com/19940608/partof%22'
 			'https:///%20repository'
 			'/home/test/package.json'
 			'git repository'
