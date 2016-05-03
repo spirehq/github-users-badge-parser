@@ -56,7 +56,6 @@ module.exports = class
 	_requestAsync: (options) ->
 		requestAsync(options)
 		.spread (response, body) ->
-			console.log response.headers
 			switch response.statusCode
 				when 200
 					return body
