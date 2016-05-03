@@ -21,15 +21,16 @@ module.exports = class
 	run: (repository) ->
 		Promise.bind @
 		.then -> @_getPackageFile repository
-		.then (content) ->
-			if content
-				@parse content
+		.then (body) ->
+			if body
+				@parse body
 				.then (json) => @updateFile(repository, json)
+				.catch (error) => @logger.warn "Npm:parse:invalidJSON", {body: body}
 		.catch (error) -> @logger.error error.message, _.extend({stack: error.stack.split("\n")}, error.details)
 
-	parse: (data) ->
-		data = data.replace(/,(\s*)(]|})/g, '$1$2') # fix trailing comma for arrays/objects (unable to parse it!)
-		Promise.try -> JSON.parse data
+	parse: (body) ->
+		body = body.replace(/,(\s*)(]|})/g, '$1$2') # fix trailing comma for arrays/objects (unable to parse it!)
+		Promise.try -> JSON.parse body
 
 	updateFile: (repository, content) ->
 		packages = _.uniq _.union _.keys(content['dependencies'] or {}), _.keys(content['devDependencies'] or {})
@@ -49,7 +50,7 @@ module.exports = class
 			Promise.bind(@)
 			.then -> @_requestAsync options
 			.catch (error) ->
-				@logger.warn "Npm:_request:retry ##{number} for #{options.url}";
+				@logger.warn "Npm:_request:retry", {number: number, url: options.url}
 				retry()
 		, @retryOptions
 
