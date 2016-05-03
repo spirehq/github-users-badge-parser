@@ -24,15 +24,12 @@ module.exports = class
 		.then (content) ->
 			if content
 				@parse content
-				.then (json) => Promise.join @updatePackage(repository, json), @updateFile(repository, json)
-				.catch (e) -> console.log "Error in Npm module. Skip this repository", e, content
+				.then (json) => @updateFile(repository, json)
+		.catch (error) -> @logger.error error.message, _.extend({stack: error.stack.split("\n")}, error.details)
 
 	parse: (data) ->
 		data = data.replace(/,(\s*)(]|})/g, '$1$2') # fix trailing comma for arrays/objects (unable to parse it!)
 		Promise.try -> JSON.parse data
-
-	updatePackage: (repository, content) ->
-		@Packages.upsert {name: content['name'], manager: MANAGER, url: repository.html_url}
 
 	updateFile: (repository, content) ->
 		packages = _.uniq _.union _.keys(content['dependencies'] or {}), _.keys(content['devDependencies'] or {})
@@ -49,12 +46,16 @@ module.exports = class
 
 	_request: (options) ->
 		promiseRetry (retry, number) =>
-			@_requestAsync options
-			.catch (e) -> console.log "Retry Npm #{number}", e; retry()
+			Promise.bind(@)
+			.then -> @_requestAsync options
+			.catch (error) ->
+				@logger.warn "Npm:_request:retry ##{number} for #{options.url}";
+				retry()
 		, @retryOptions
 
 	_requestAsync: (options) ->
-		requestAsync(options)
+		Promise.bind @
+		.then -> requestAsync(options)
 		.spread (response, body) ->
 			switch response.statusCode
 				when 200
@@ -62,7 +63,9 @@ module.exports = class
 				when 404
 					return ""
 				else
-					@logger.error "Npm: request error, status code: #{response.statusCode}"
-					@logger.error response.headers
-					@logger.error body
-					throw new Error()
+					error = new Error("Npm:_requestAsync:invalidStatusCode")
+					error.details =
+						statusCode: response.statusCode
+						headers: response.headers
+						body: body
+					throw error
