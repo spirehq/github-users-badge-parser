@@ -61,6 +61,7 @@ module.exports = class
 
 	_getPackageFile: (repository) ->
 		url = repository.url.replace("github.com", "raw.githubusercontent.com") + "/master/#{FILE}"
+		return if url is "https://raw.githubusercontent.com/lukelove/Pipes/master/package.json" # workaround for Github error
 		@_request {url}
 
 	_request: (options) ->
