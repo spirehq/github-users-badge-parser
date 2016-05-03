@@ -2,13 +2,22 @@
   "isDebug": false,
   "logger": {
     "transports": {
+      "Loggly": {
+        "silent": true,
+        "level": "error",
+        "handleExceptions": false,
+        "json": true,
+        "token": "Define_this_key_in_environment_settings",
+        "subdomain": "spirehq",
+        "tags": ["badge"]
+      },
       "Console": {
         "silent": false,
         "level": "verbose",
         "handleExceptions": false,
-        "prettyPrint": true,
+        "prettyPrint": false,
         "colorize": true,
-        "showLevel": false,
+        "showLevel": true,
         "timestamp": true
       }
     }

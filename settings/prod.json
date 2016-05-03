@@ -1,4 +1,7 @@
 {
+  "Loggly": {
+    "silent": false
+  },
   "mongodb": {
     "url": "mongodb://localhost/badge"
   }
