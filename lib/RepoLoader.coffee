@@ -1,6 +1,6 @@
 https = require 'https'
 Promise = require 'bluebird'
-_ = require 'underscore'
+	_ = require 'underscore'
 RepositoriesClass = require './model/Repositories.coffee'
 Npm = require './package/Npm.coffee'
 promiseRetry = require 'promise-retry'
@@ -13,6 +13,9 @@ module.exports = class
 		@handlers = [
 			new Npm(dependencies)
 		]
+		@path = '/repositories'
+		@previousRss = process.memoryUsage().rss
+		@maxRss = process.memoryUsage().rss
 		
 	syncRepositories: ->
 		@getRepositories (repositories) => Promise.resolve(repositories).bind(@).map @handleRepository
@@ -24,25 +27,34 @@ module.exports = class
 		]
 			
 	getRepositories: (handler) ->
-		@_request {path: '/repositories'}, handler
+		@_request {}, handler
 
 	_getNextRepositoryPage: (response, handler) ->
 		# example '<https://api.github.com/repositories?since=367>; rel="next", <https://api.github.com/repositories{?since}>; rel="first"'
 		link = response.headers.link
-
 		if link
-			url = link.match(/^<.+(\/repositories.+)>; rel="next"/)[1]
-			@logger.info "RepoLoader:processing", url, "(memory usage: #{process.memoryUsage().rss} bytes)"
-#			console.log new Date(), url
-			@_request {path: url}, handler if url
+			@path = link.match(/^<.+(\/repositories.+)>; rel="next"/)[1]
+		else
+			@path = "" # this will break the loop
 
 	_request: (options, handler) ->
-		promiseRetry (retry, number) =>
-			@_promisedRequest options, handler
-			.catch (e) -> console.log "Retry RepoLoader #{number}", e; retry()
-		, @retryOptions
+		return if not @path
+		currentRss = process.memoryUsage().rss
+		@maxRss = Math.max(@maxRss, currentRss)
+		@logger.info "RepoLoader:processing", @path, "(memory @ max: #{parseInt(@maxRss / 1024, 10)} KB, current: #{parseInt(currentRss / 1024, 10)} KB; change: #{if currentRss > @previousRss then "+" else ""}#{parseInt((currentRss - @previousRss) / 1024, 10)} KB)"
+		@previousRss = currentRss
+		opts = _.defaults({path: @path}, options)
+		process.nextTick =>
+			Promise.bind(@)
+			.then ->
+				promiseRetry (retry, number) =>
+					@_requestAsync opts, handler
+					.catch (e) -> console.log "Retry RepoLoader #{number}", e; retry()
+				, @retryOptions
+			.then ->
+				@_request(opts, handler)
 
-	_promisedRequest: (options, handler) ->
+	_requestAsync: (options, handler) ->
 		# use "next" here to increase performance (avoid rate limitation!!)
 		#next = @_getNextRepositoryPage response, handler
 

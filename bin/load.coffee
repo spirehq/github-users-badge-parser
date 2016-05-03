@@ -38,5 +38,3 @@ loader = new RepoLoader(settings.github, dependencies)
 
 Promise.join Repositories.init(), Packages.init(), Files.init()
 .then -> loader.syncRepositories()
-.then -> console.log "Done"
-.then -> process.exit(0)
