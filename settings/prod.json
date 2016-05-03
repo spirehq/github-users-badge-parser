@@ -1,6 +1,10 @@
 {
-  "Loggly": {
-    "silent": false
+  "logger": {
+    "transports": {
+      "Loggly": {
+        "silent": false
+      }
+    }
   },
   "mongodb": {
     "url": "mongodb://localhost/badge"
