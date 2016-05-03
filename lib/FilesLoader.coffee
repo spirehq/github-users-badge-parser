@@ -1,8 +1,8 @@
 https = require 'https'
 Promise = require 'bluebird'
 requestAsync = Promise.promisify((require "request"), {multiArgs: true})
-PackagesClass = require '../model/Packages.coffee'
-FilesClass = require '../model/Files.coffee'
+FilesClass = require './model/Files.coffee'
+RepositoriesClass = require './model/Repositories.coffee'
 _ = require 'underscore'
 promiseRetry = require 'promise-retry'
 
@@ -10,15 +10,33 @@ FILE = 'package.json'
 MANAGER = 'npm'
 
 module.exports = class
-	constructor: (dependencies) ->
+	constructor: (settings, dependencies) ->
+		@settings = settings
 		@logger = dependencies.logger
-		@Packages = new PackagesClass(dependencies.mongodb)
 		@Files = new FilesClass(dependencies.mongodb)
+		@Repositories = new RepositoriesClass(dependencies.mongodb)
+		@limit = 100
+		@skip = 0
 		@retryOptions = 
 			factor: 1
 			minTimeout: 30000
+		@previousRss = process.memoryUsage().rss
+		@maxRss = process.memoryUsage().rss
 
-	run: (repository) ->
+	run: ->
+		currentRss = process.memoryUsage().rss
+		@maxRss = Math.max(@maxRss, currentRss)
+		@logger.info "FilesLoader:run", @skip, "(memory @ max: #{parseInt(@maxRss / 1024, 10)} KB, current: #{parseInt(currentRss / 1024, 10)} KB; change: #{if currentRss > @previousRss then "+" else ""}#{parseInt((currentRss - @previousRss) / 1024, 10)} KB)"
+		@previousRss = currentRss
+		Promise.bind @
+		.then -> @Repositories.find().limit(@limit).skip(@skip)
+		.map @handleRepository
+		.then (results) ->
+			return if not results.length
+			@skip += @limit
+			process.nextTick => @run()
+
+	handleRepository: (repository) ->
 		Promise.bind @
 		.then -> @_getPackageFile repository
 		.then (body) ->
@@ -26,7 +44,8 @@ module.exports = class
 				@parse body
 				.then (json) => @updateFile(repository, json)
 				.catch (error) => @logger.warn "Npm:parse:invalidJSON", {body: body}
-		.catch (error) -> @logger.error error.message, _.extend({stack: error.stack.split("\n")}, error.details)
+		.catch (error) -> @logger.error error.message, _.extend({stack: error.stack}, error.details)
+		.thenReturn(true)
 
 	parse: (body) ->
 		body = body.replace(/,(\s*)(]|})/g, '$1$2') # fix trailing comma for arrays/objects (unable to parse it!)
@@ -37,12 +56,11 @@ module.exports = class
 		@Files.upsert
 			name: FILE
 			manager: MANAGER
-			url: repository.html_url
+			url: repository.url
 			packages: packages
 
 	_getPackageFile: (repository) ->
-		root = repository['full_name']
-		url = "https://raw.githubusercontent.com/#{root}/master/#{FILE}"
+		url = repository.url.replace("github.com", "raw.githubusercontent.com") + "/master/#{FILE}"
 		@_request {url}
 
 	_request: (options) ->
@@ -50,7 +68,7 @@ module.exports = class
 			Promise.bind(@)
 			.then -> @_requestAsync options
 			.catch (error) ->
-				@logger.warn "Npm:_request:retry", {number: number, url: options.url}
+				@logger.warn "Npm:_request:retry", _.extend({attempt: number, url: options.url, error: error.stack}, error.details)
 				retry()
 		, @retryOptions
 
@@ -64,7 +82,7 @@ module.exports = class
 				when 404
 					return ""
 				else
-					error = new Error("Npm:_requestAsync:invalidStatusCode")
+					error = new Error("FilesLoader:_requestAsync:invalidStatusCode")
 					error.details =
 						statusCode: response.statusCode
 						headers: response.headers

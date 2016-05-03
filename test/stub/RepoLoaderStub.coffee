@@ -1,4 +1,4 @@
-RepoLoader = require '../../lib/RepoLoader.coffee'
+RepoLoader = require '../../lib/RepositoriesLoader.coffee'
 
 MAX_PAGES = 10
 

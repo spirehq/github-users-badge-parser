@@ -23,7 +23,7 @@ argv = yargs
 
 settings = settingsLoader path.resolve(process.cwd(), argv.settings)
 
-Calculator = require '../lib/Calculator.coffee'
+FilesLoader = require '../lib/FilesLoader.coffee'
 RepositoriesCollection = require '../lib/model/Repositories.coffee'
 PackagesCollection = require '../lib/model/Packages.coffee'
 FilesCollection = require '../lib/model/Files.coffee'
@@ -34,9 +34,7 @@ Repositories = new RepositoriesCollection dependencies.mongodb
 Packages = new PackagesCollection dependencies.mongodb
 Files = new FilesCollection dependencies.mongodb
 
-calculator = new Calculator(dependencies)
+loader = new FilesLoader(settings, dependencies)
 
 Promise.join Repositories.init(), Packages.init(), Files.init()
-.then -> calculator.run()
-.then -> console.log "Done"
-.then -> process.exit(0)
+.then -> loader.run()

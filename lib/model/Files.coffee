@@ -41,3 +41,6 @@ module.exports = class
 		_.extend _.pick(data, 'name', 'manager', 'url', 'packages'),
 			createdAt: now
 			updatedAt: now
+
+	count: (selector) ->
+		@collection.count selector

@@ -9,7 +9,10 @@ module.exports = class
 
 	init: ->
 		@collection.ensureIndex {url: 1}
-		
+
+	find: (query = {}) ->
+		@collection.find query
+
 	upsert: (raw) ->
 		object = @buildObject raw
 
