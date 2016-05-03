@@ -21,19 +21,19 @@ module.exports = class
 		@collection.insert object
 
 	update: (object) ->
-		@collection.update @_getSelector(object), {$set: {name: object.name, updatedAt: new Date()}}
+		@collection.update @_getSelector(object), {$set: {url: object.url, updatedAt: new Date()}}
 
 	findByObject: (object) ->
 		@collection.findOne @_getSelector object
 
 	_getSelector: (object) ->
-		_.pick object, 'url', 'manager'
+		_.pick object, 'name', 'manager'
 
 	buildObject: (data) ->
 		Match.check data, Match.ObjectIncluding
 			name: String
 			manager: String
-			url: String
+#			url: Match.Optional String
 
 		now = new Date()
 
