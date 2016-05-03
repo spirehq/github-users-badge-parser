@@ -1,6 +1,6 @@
 https = require 'https'
 Promise = require 'bluebird'
-	_ = require 'underscore'
+_ = require 'underscore'
 RepositoriesClass = require './model/Repositories.coffee'
 Npm = require './package/Npm.coffee'
 promiseRetry = require 'promise-retry'
