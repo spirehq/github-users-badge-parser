@@ -2,5 +2,9 @@
   "isDebug": true,
   "mongodb": {
     "url": "mongodb://localhost/%database%"
+  },
+  "couchdb": {
+    "database": "registry",
+    "url": "http://localhost:5984"
   }
 }
