@@ -17,6 +17,18 @@ argv = yargs
       type: "string"
       description: "Settings for dependencies (SWF binding, logger, etc)"
       demand: true
+    "f":
+      alias: "from"
+      type: "number"
+      description: "From MongoDB `skip` parameter"
+      demand: false
+      default: 0
+    "t":
+      alias: "to"
+      type: "number"
+      description: "To MongoDB `skip` parameter"
+      demand: false
+      default: 0
   )
   .strict()
   .argv
@@ -35,6 +47,8 @@ Packages = new PackagesCollection dependencies.mongodb
 Files = new FilesCollection dependencies.mongodb
 
 loader = new FilesLoader(settings, dependencies)
+loader.skip = argv.from
+loader.skipMax = argv.to
 
 Promise.join Repositories.init(), Packages.init(), Files.init()
 .then -> loader.run()

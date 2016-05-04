@@ -17,6 +17,7 @@ module.exports = class
 		@Repositories = new RepositoriesClass(dependencies.mongodb)
 		@limit = 100
 		@skip = 0
+		@skipMax = 0
 		@retryOptions = 
 			factor: 1
 			minTimeout: 30000
@@ -33,7 +34,7 @@ module.exports = class
 		.map @handleRepository
 		.then (results) ->
 			@skip += @limit
-			if results.length
+			if results.length and (not @skipMax or @skipMax >= @skip)
 				process.nextTick => @run()
 			else
 				process.exit(0)
