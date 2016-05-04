@@ -7,9 +7,11 @@ PackagesClass = require '../model/Packages.coffee'
 MANAGER = 'npm'
 
 module.exports = class
-	constructor: (dependencies) ->
+	constructor: (dependencies, settings) ->
+		@settings = settings
 		@chunkSize = 1000
-		@registry = dependencies.couchdb
+		@db = dependencies.couchdb
+		@registry = Promise.promisifyAll @db.use settings.database
 		@logger = dependencies.logger
 		@Packages = new PackagesClass(dependencies.mongodb)
 		@counter = 0
@@ -19,11 +21,16 @@ module.exports = class
 
 	run: ->
 		Promise.bind @
+		.then @replicate
+		.tap -> @logger.verbose "CouchDB #{@settings.database} has been replicated"
 		.then -> @registry.listAsync()
 		.then (body) -> body.rows
 		.tap (rows) -> @overall = rows.length
 		.then (rows) -> __.chunk rows, @chunkSize
 		.map @handleChunk, {concurrency: 1}
+
+	replicate: ->
+		@db.replicateAsync "https://skimdb.npmjs.com/registry", "http://admin:password@127.0.0.1:5984/registry", {create_target: true}
 
 	handleChunk: (chunk) ->
 		Promise.bind @

@@ -14,8 +14,8 @@ createCouchDB = (settings) ->
   nano = nanoConstructor
     url: settings.url
     requestDefaults: {agent}
-  db = Promise.promisifyAll nano.db
-  Promise.promisifyAll db.use settings.database
+  Promise.promisifyAll nano.db
+  #Promise.promisifyAll db.use settings.database
 
 module.exports = (settings, handle) ->
   Match.check settings, Object
