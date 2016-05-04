@@ -30,7 +30,7 @@ module.exports = class
 		.map @handleChunk, {concurrency: 1}
 
 	replicate: ->
-		@db.replicateAsync "https://skimdb.npmjs.com/registry", "http://admin:password@127.0.0.1:5984/registry", {create_target: true}
+		@db.replicateAsync @settings.source, @settings.target, {create_target: true}
 
 	handleChunk: (chunk) ->
 		Promise.bind @
