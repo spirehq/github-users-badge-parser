@@ -56,7 +56,7 @@ module.exports = class
 
 	parse: (link) ->
 		# filter exceptional cases
-		return if link in [
+		return false if link in [
 			'(none)'
 			'https:///(none)'
 			'https:///%20rep'
@@ -69,29 +69,49 @@ module.exports = class
 		# drop quotas
 		link = link.replace /['"\(\)]+/, ''
 
-		return if /^\s*$/.test link
+		return false if /^\s*$/.test link
 
 		matches = link.match /^(ssh|git\+https|https|http|git)?(:\/*)?(.*@)?([^@]+?)(\.git)?$/
 		if matches?[4]
 			uri = matches[4]
 			uri = uri.replace(/:/, '/')
+			url = 'https://' + uri
+
+			return false if not @validateUrl url
+			url
 		else
 			@logger.warn 'Wrong link', link
 
-	save: (name, uri) ->
+	validateUrl: (url) ->
+		nonIP = /^https:\/\/[^\/]+\.[a-zA-Z]{2,}\/.*$/.test url
+		generic = new RegExp("^(http|https|ftp)\://([a-zA-Z0-9\.\-]+(\:[a-zA-Z0-9\.&amp;%\$\-]+)*@)*((25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9])\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9]|0)\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9]|0)\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[0-9])|([a-zA-Z0-9\-]+\.)*[a-zA-Z0-9\-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{2}))(\:[0-9]+)*(/($|[a-zA-Z0-9\.\,\?\'\\\+&amp;%\$#\=~_\-]+))*$").test url
+		nonIP and generic
+
+	save: (name, url) ->
 		object = {name}
-		object.url = 'https://' + uri if uri
+		object.url = url if url
 		return @savePackage object
 
 		# or
 
-		if object.url
-			requestAsync object.url
-			.bind @
-			.then -> @savePackage object
-			.catch (e) -> @logger.warn "Unreachable link '#{uri}'", e if e.code not in ['ENOTFOUND', 'ECONNRESET', 'ECONNREFUSED', 'EHOSTUNREACH', 'CERT_HAS_EXPIRED', 'ETIMEDOUT', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'EPROTO'] and not e.cert
-		else
-			@savePackage object
+#		if object.url
+#			requestAsync object.url
+#			.bind @
+#			.spread (response, body) ->
+#				switch response.statusCode
+#					when 200
+#						@savePackage object
+#						.return [response, body]
+#					else
+#						error = new Error("NpmParser:_requestAsync:invalidStatusCode")
+#						error.details =
+#							statusCode: response.statusCode
+#							headers: response.headers
+#							body: body
+#						throw error
+#			.catch (e) -> @logger.warn "Unreachable link '#{uri}'" if e.code not in ['ENOTFOUND', 'ECONNRESET', 'ECONNREFUSED', 'EHOSTUNREACH', 'CERT_HAS_EXPIRED', 'ETIMEDOUT', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'EPROTO'] and not e.cert
+#		else
+#			@savePackage object
 
 	savePackage: (object) ->
 		@Packages.upsert _.extend {manager: MANAGER}, object
