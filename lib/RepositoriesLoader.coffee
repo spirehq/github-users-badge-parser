@@ -41,6 +41,7 @@ module.exports = class
 						else
 							retry(error)
 				, @retryOptions
+			.catch (error) -> @logger.error error.message, _.extend({stack: error.stack}, error.details)
 			.then ->
 				@_request()
 
