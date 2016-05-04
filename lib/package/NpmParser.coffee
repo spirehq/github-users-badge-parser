@@ -14,6 +14,8 @@ module.exports = class
 		@Packages = new PackagesClass(dependencies.mongodb)
 		@counter = 0
 		@overall = undefined
+		@previousRss = process.memoryUsage().rss
+		@maxRss = process.memoryUsage().rss
 
 	run: ->
 		Promise.bind @
@@ -25,6 +27,11 @@ module.exports = class
 
 	handleChunk: (chunk) ->
 		Promise.bind @
+		.tap ->
+			currentRss = process.memoryUsage().rss
+			@maxRss = Math.max(@maxRss, currentRss)
+			@logger.verbose "(memory @ max: #{parseInt(@maxRss / 1024, 10)} KB, current: #{parseInt(currentRss / 1024, 10)} KB; change: #{if currentRss > @previousRss then "+" else ""}#{parseInt((currentRss - @previousRss) / 1024, 10)} KB)"
+			@previousRss = currentRss
 		.return _.pluck chunk, 'key'
 		.map @handlePackage, {concurrency: 5}
 		.tap -> @counter += @chunkSize; @logger.verbose "Chunk has been managed #{@counter}/#{@overall}"
