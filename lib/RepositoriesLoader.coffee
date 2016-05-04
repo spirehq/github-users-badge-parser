@@ -57,7 +57,7 @@ module.exports = class
 				when 200
 					Promise.bind(@)
 					.then -> @parse(body)
-					.map (repository) -> @Repositories.upsert(repository)
+					.map (repository) -> @Repositories.upsert(repository) if not repository.fork
 					.return [response, body]
 				else
 					error = new Error("RepositoriesLoader:_requestAsync:invalidStatusCode")

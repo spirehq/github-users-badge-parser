@@ -47,8 +47,7 @@ module.exports = class
 				@parse body
 				.then (json) =>
 					if json
-						@updateFile(repository, json) if not json.fork
-						console.log (if json.fork then "YES" else "NO")
+						@updateFile(repository, json)
 		.catch (error) -> @logger.error error.message, _.extend({stack: error.stack}, error.details)
 		.thenReturn(true)
 
