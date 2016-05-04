@@ -38,5 +38,3 @@ calculator = new Calculator(dependencies)
 
 Promise.join Repositories.init(), Packages.init(), Files.init()
 .then -> calculator.run()
-.then -> console.log "Done"
-.then -> process.exit(0)
