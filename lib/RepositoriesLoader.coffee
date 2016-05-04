@@ -6,11 +6,12 @@ RepositoriesClass = require './model/Repositories.coffee'
 promiseRetry = require 'promise-retry'
 
 module.exports = class
-	constructor: (settings, dependencies) ->
+	constructor: (settings, dependencies, options) ->
+		_.extend @, options
 		@settings = settings
 		@logger = dependencies.logger
 		@Repositories = new RepositoriesClass(dependencies.mongodb)
-		@url = 'https://api.github.com/repositories'
+		@url = "https://api.github.com/repositories?since=#{@from}"
 		@previousRss = process.memoryUsage().rss
 		@maxRss = process.memoryUsage().rss
 		
@@ -30,7 +31,15 @@ module.exports = class
 					@_requestAsync()
 					.catch (error) ->
 						@logger.warn "RepositoriesLoader:_request:retry", _.extend({attempt: number, url: @url, error: error.stack}, error.details)
-						retry()
+						ratelimitReset = error.details?.headers?["x-ratelimit-reset"]
+						if ratelimitReset
+							ratelimitReset = ratelimitReset * 1000
+							now = Date.now()
+							timeout = Math.max(0, ratelimitReset - now)
+							new Promise (resolve, reject) => setTimeout resolve, timeout
+							.then -> retry(error)
+						else
+							retry(error)
 				, @retryOptions
 			.then ->
 				@_request()
@@ -41,7 +50,7 @@ module.exports = class
 			url: @url
 			headers:
 				'User-Agent': ''
-				'Authorization': "token #{@settings.github.token}"
+				'Authorization': "token #{@account.token}"
 		)
 		.spread (response, body) ->
 			switch response.statusCode

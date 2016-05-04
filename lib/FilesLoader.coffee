@@ -72,7 +72,7 @@ module.exports = class
 			.then -> @_requestAsync options
 			.catch (error) ->
 				@logger.warn "Npm:_request:retry", _.extend({attempt: number, url: options.url, error: error.stack}, error.details)
-				retry()
+				retry(error)
 		, @retryOptions
 
 	_requestAsync: (options) ->
