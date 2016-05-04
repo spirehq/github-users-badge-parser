@@ -18,7 +18,7 @@ module.exports = class
 		@limit = 100
 		@skip = 0
 		@skipMax = 0
-		@retryOptions = 
+		@retryOptions =
 			factor: 1
 			minTimeout: 30000
 		@previousRss = process.memoryUsage().rss
@@ -45,14 +45,16 @@ module.exports = class
 		.then (body) ->
 			if body
 				@parse body
-				.then (json) => @updateFile(repository, json)
-				.catch (error) => @logger.warn "Npm:parse:invalidJSON", {body: body}
+				.then (json) =>
+					if json
+						@updateFile(repository, json)
 		.catch (error) -> @logger.error error.message, _.extend({stack: error.stack}, error.details)
 		.thenReturn(true)
 
 	parse: (body) ->
 		body = body.replace(/,(\s*)(]|})/g, '$1$2') # fix trailing comma for arrays/objects (unable to parse it!)
 		Promise.try -> JSON.parse body
+		.catch (error) => @logger.warn "FilesLoader:parse:invalidJSON", {body: body}
 
 	updateFile: (repository, content) ->
 		packages = _.uniq _.union _.keys(content['dependencies'] or {}), _.keys(content['devDependencies'] or {})
@@ -64,7 +66,6 @@ module.exports = class
 
 	_getPackageFile: (repository) ->
 		url = repository.url.replace("github.com", "raw.githubusercontent.com") + "/master/#{FILE}"
-		return if url is "https://raw.githubusercontent.com/lukelove/Pipes/master/package.json" # workaround for Github error
 		@_request {url}
 
 	_request: (options) ->
@@ -72,7 +73,13 @@ module.exports = class
 			Promise.bind(@)
 			.then -> @_requestAsync options
 			.catch (error) ->
-				@logger.warn "Npm:_request:retry", _.extend({attempt: number, url: options.url, error: error.stack}, error.details)
+				# GitHub always returns statusCode=500 on the following files:
+				# https://raw.githubusercontent.com/sergeyzavadski/libpropeller/master/package.json
+				# https://raw.githubusercontent.com/lukelove/Pipes/master/package.json
+				if number > 5 and error.details?.statusCode is 500 # sometimes GitHub just can't serve the file
+					@logger.warn "FilesLoader:_request:skip", _.extend({url: options.url})
+					return
+				@logger.warn "FilesLoader:_request:retry", _.extend({attempt: number, url: options.url, error: error.stack}, error.details)
 				retry(error)
 		, @retryOptions
 
