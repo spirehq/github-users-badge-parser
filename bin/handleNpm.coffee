@@ -1,3 +1,5 @@
+#!/usr/bin/env coffee
+
 path = require "path"
 yargs = require "yargs"
 createDependencies = require '../helper/dependencies'
