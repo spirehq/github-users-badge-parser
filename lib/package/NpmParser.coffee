@@ -14,41 +14,34 @@ module.exports = class
 		@Packages = new PackagesClass(dependencies.mongodb)
 		@counter = 0
 		@overall = undefined
-#		@retryOptions =
-#			factor: 1
-#			minTimeout: 30000
 
 	run: ->
 		Promise.bind @
 		.then -> @registry.listAsync()
-		.then (body) ->
-			@overall = body.rows.length
-			__.chunk body.rows, @chunkSize
-		.map((chunk) ->
-			Promise.resolve _.pluck chunk, 'key'
-			.bind @
-			.map (key) ->
-				@registry.getAsync(key)
-				.bind @
-				.then (object) ->
-					name = object.name
-					return if not name # don't even try to handle entries with no names
-					link = object.repository?.url
-					url = @parse link if link
-					if url
-						requestAsync url
-						.bind @
-						.then -> @savePackage name, url
-						.catch (e) -> console.log "Unreachable link #{url} (original: '#{link}')", e if e.code not in ['ENOTFOUND', 'ECONNRESET', 'ECONNREFUSED', 'EHOSTUNREACH', 'CERT_HAS_EXPIRED', 'ETIMEDOUT', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'EPROTO'] and not e.cert
-					else
-						@savePackage name, url
-		
-			.then -> @counter += @chunkSize; console.log "Chunk has been managed. #{@counter}/#{@overall}"
-		, {concurrency: 1})
+		.then (body) -> body.rows
+		.tap (rows) -> @overall = rows.length
+		.then (rows) -> __.chunk rows, @chunkSize
+		.map @handleChunk, {concurrency: 1}
+
+	handleChunk: (chunk) ->
+		Promise.bind @
+		.return _.pluck chunk, 'key'
+		.map @handlePackage, {concurrency: 5}
+		.tap -> @counter += @chunkSize; @logger.verbose "Chunk has been managed #{@counter}/#{@overall}"
+
+	handlePackage: (key) ->
+		Promise.bind @
+		.then -> @registry.getAsync(key)
+		.then (object) ->
+			name = object.name
+			return if not name # don't even try to handle entries with no names
+			link = object.repository?.url
+			url = @parse link if link
+			@save name, url
+		.tap -> @logger.log "Package #{key}"
 
 	parse: (link) ->
 		# filter exceptional cases
-		return if /^\s*$/.test link
 		return if link in [
 			'(none)'
 			'https:///(none)'
@@ -61,15 +54,30 @@ module.exports = class
 	
 		# drop quotas
 		link = link.replace /['"\(\)]+/, ''
-	
+
+		return if /^\s*$/.test link
+
 		matches = link.match /^(ssh|git\+https|https|http|git)?(:\/*)?(.*@)?([^@]+?)(\.git)?$/
 		if matches?[4]
 			uri = matches[4]
 			uri = uri.replace(/:/, '/')
-			'https://' + uri
 		else
-			console.log 'Wrong link', link
-			
-	savePackage: (name, url) ->
-		@Packages.upsert {manager: MANAGER, name, url}
+			@logger.warn 'Wrong link', link
 
+	save: (name, uri) ->
+		object = {name}
+		object.url = 'https://' + uri if uri
+		return @savePackage object
+
+		# or
+
+		if object.url
+			requestAsync object.url
+			.bind @
+			.then -> @savePackage object
+			.catch (e) -> @logger.warn "Unreachable link '#{uri}'", e if e.code not in ['ENOTFOUND', 'ECONNRESET', 'ECONNREFUSED', 'EHOSTUNREACH', 'CERT_HAS_EXPIRED', 'ETIMEDOUT', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'EPROTO'] and not e.cert
+		else
+			@savePackage object
+
+	savePackage: (object) ->
+		@Packages.upsert _.extend {manager: MANAGER}, object
