@@ -19,7 +19,9 @@ module.exports = class
 		@_request()
 
 	_request: ->
-		process.exit(0) if not @url
+		if not @url
+			@logger.info "RepositoriesLoader:finished"
+			process.exit(0)
 		currentRss = process.memoryUsage().rss
 		@maxRss = Math.max(@maxRss, currentRss)
 		@logger.info "RepositoriesLoader:_request", @url, "(memory @ max: #{parseInt(@maxRss / 1024, 10)} KB, current: #{parseInt(currentRss / 1024, 10)} KB; change: #{if currentRss > @previousRss then "+" else ""}#{parseInt((currentRss - @previousRss) / 1024, 10)} KB)"

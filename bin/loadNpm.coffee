@@ -2,8 +2,9 @@
 
 path = require "path"
 yargs = require "yargs"
-createDependencies = require '../helper/dependencies'
+createDependencies = require "../helper/dependencies"
 settingsLoader = require "../core/helper/settings"
+createSignalHandler = require "../helper/signal"
 NpmParser = require '../lib/package/NpmParser.coffee'
 
 argv = yargs
@@ -20,6 +21,8 @@ argv = yargs
 
 settings = settingsLoader path.resolve(process.cwd(), argv.settings)
 dependencies = createDependencies(settings, 'badge')
+
+createSignalHandler("NpmParser", dependencies)
 
 parser = new NpmParser(dependencies, settings.couchdb)
 parser.run()

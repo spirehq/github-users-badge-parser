@@ -29,6 +29,7 @@ module.exports = class
 			if results.length and (not @skipMax or @skipMax >= @skip)
 				process.nextTick => @run()
 			else
+				@logger.info "Calculator:finished"
 				process.exit(0)
 
 	calculateForRepository: (repository) ->

@@ -30,6 +30,7 @@
   "dependencies": {
     "agentkeepalive": "^2.1.1",
     "bluebird": "^3.3.5",
+    "death": "^1.0.0",
     "lodash": "^4.11.2",
     "mtr-match": "0.0.4",
     "nano": "^6.2.0",

@@ -4,8 +4,9 @@ _ = require 'underscore'
 path = require "path"
 yargs = require "yargs"
 Promise = require 'bluebird'
-createDependencies = require '../helper/dependencies'
+createDependencies = require "../helper/dependencies"
 settingsLoader = require "../core/helper/settings"
+createSignalHandler = require "../helper/signal"
 
 Promise.longStackTraces() # slows down execution but simplifies debugging
 
@@ -28,6 +29,8 @@ RepositoriesCollection = require '../lib/model/Repositories.coffee'
 PackagesCollection = require '../lib/model/Packages.coffee'
 FilesCollection = require '../lib/model/Files.coffee'
 dependencies = createDependencies(settings, 'badge')
+
+createSignalHandler("Calculator", dependencies)
 
 # ensureIndex
 Repositories = new RepositoriesCollection dependencies.mongodb

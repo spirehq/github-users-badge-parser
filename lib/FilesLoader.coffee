@@ -37,6 +37,7 @@ module.exports = class
 			if results.length and (not @skipMax or @skipMax >= @skip)
 				process.nextTick => @run()
 			else
+				@logger.info "FilesLoader:finished"
 				process.exit(0)
 
 	handleRepository: (repository) ->
