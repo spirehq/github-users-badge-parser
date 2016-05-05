@@ -30,7 +30,7 @@ module.exports = class
 		@logger.info "FilesLoader:run", @skip, "(memory @ max: #{parseInt(@maxRss / 1024, 10)} KB, current: #{parseInt(currentRss / 1024, 10)} KB; change: #{if currentRss > @previousRss then "+" else ""}#{parseInt((currentRss - @previousRss) / 1024, 10)} KB)"
 		@previousRss = currentRss
 		Promise.bind @
-		.then -> @Repositories.find().sort({createdAt: 1}).limit(@limit).skip(@skip)
+		.then -> @Repositories.find().limit(@limit).skip(@skip)
 		.map @handleRepository
 		.then (results) ->
 			@skip += @limit
