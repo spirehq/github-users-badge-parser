@@ -26,6 +26,8 @@ createSignalHandler("NpmParser", dependencies)
 
 parser = new NpmParser(dependencies, settings.couchdb)
 parser.run()
-.then -> console.log "Done"
-.catch (e) -> console.error "ERROR", e
-.then -> process.exit(0)
+.then ->
+	dependencies.logger.verbose "LoadNpm is finished"
+	
+	# see http://stackoverflow.com/questions/24045414/node-program-with-promises-doesnt-finish
+	dependencies.mongodb.close()
