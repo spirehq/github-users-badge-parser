@@ -79,7 +79,8 @@ module.exports = class
 		# example '<https://api.github.com/repositories?since=367>; rel="next", <https://api.github.com/repositories{?since}>; rel="first"'
 		link = response.headers.link
 		if link
-			@url = link.match(/^<(.+\/repositories.+)>; rel="next"/)[1]
+			match = link.match(/^<(.+\/repositories.+)>; rel="next"/)
+			@url = match?[1]
 		else
 			@url = "" # this will break the loop
 
