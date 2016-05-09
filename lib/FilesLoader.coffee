@@ -49,7 +49,9 @@ module.exports = class
 				.then (json) =>
 					if json
 						@updateFile(repository, json)
-		.catch (error) -> @logger.error error.message, _.extend({stack: error.stack}, error.details)
+		.catch (error) ->
+			@logger.error error.message, _.extend({stack: error.stack}, error.details)
+			process.exit(1) # to catch and retry from outside
 		.thenReturn(true)
 
 	parse: (body) ->
