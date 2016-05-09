@@ -1,9 +1,9 @@
 #!/bin/bash
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-SETTINGS=$1
-CURRENT=0
-MAX=21000000
+CURRENT=$1
+MAX=$2
+SETTINGS=$3
 STEP=1000
 
 while [ $CURRENT -lt $MAX ]
