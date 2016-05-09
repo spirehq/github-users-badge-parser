@@ -3,8 +3,8 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 SETTINGS=$1
 CURRENT=0
-MAX=21000
-STEP=10
+MAX=21000000
+STEP=1000
 
 while [ $CURRENT -lt $MAX ]
 do
