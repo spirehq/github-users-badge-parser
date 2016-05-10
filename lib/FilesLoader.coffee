@@ -18,6 +18,8 @@ module.exports = class
 		@limit = 100
 		@skip = 0
 		@skipMax = 0
+		@networkTime = 0
+		@mongoTime = 0
 		@retryOptions =
 			factor: 1
 			minTimeout: 30000
@@ -37,12 +39,18 @@ module.exports = class
 			if results.length and (not @skipMax or @skipMax >= @skip)
 				process.nextTick => @run()
 			else
-				@logger.info "FilesLoader:finished"
+				@logger.info "FilesLoader:finished. Request time #{@requestTime}ms, processing time #{@mongoTime}ms"
 				process.exit(0)
 
 	handleRepository: (repository) ->
+		requestTime = undefined
+		processingTime = undefined
+
 		Promise.bind @
+		.tap -> requestTime = new Date()
 		.then -> @_getPackageFile repository
+		.tap -> @networkTime += new Date() - requestTime
+		.tap -> processingTime = new Date()
 		.then (body) ->
 			if body
 				@parse body
@@ -52,6 +60,7 @@ module.exports = class
 		.catch (error) ->
 			@logger.error error.message, _.extend({stack: error.stack}, error.details)
 			process.exit(1) # to catch and retry from outside
+		.tap -> @mongoTime += new Date() - processingTime
 		.thenReturn(true)
 
 	parse: (body) ->
