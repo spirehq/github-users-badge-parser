@@ -39,7 +39,7 @@ module.exports = class
 			if results.length and (not @skipMax or @skipMax >= @skip)
 				process.nextTick => @run()
 			else
-				@logger.info "FilesLoader:finished. Request time #{@requestTime}ms, processing time #{@mongoTime}ms"
+				@logger.info "FilesLoader:finished. Request time #{@networkTime}ms, processing time #{@mongoTime}ms"
 				process.exit(0)
 
 	handleRepository: (repository) ->
