@@ -19,6 +19,7 @@ module.exports = class
 		@skip = 0
 		@skipMax = 0
 		@networkTime = 0
+		@maxNetworkTime = 0
 		@mongoTime = 0
 		@retryOptions =
 			factor: 1
@@ -39,7 +40,7 @@ module.exports = class
 			if results.length and (not @skipMax or @skipMax >= @skip)
 				process.nextTick => @run()
 			else
-				@logger.info "FilesLoader:finished. Request time #{@networkTime}ms, processing time #{@mongoTime}ms"
+				@logger.info "FilesLoader:finished. Request time #{@networkTime}ms, processing time #{@mongoTime}ms, max request time #{@maxNetworkTime}"
 				process.exit(0)
 
 	handleRepository: (repository) ->
@@ -49,7 +50,7 @@ module.exports = class
 		Promise.bind @
 		.tap -> requestTime = new Date()
 		.then -> @_getPackageFile repository
-		.tap -> @networkTime += new Date() - requestTime
+		.tap -> diff = new Date() - requestTime; @networkTime += diff; @maxNetworkTime = Math.max(@maxNetworkTime, diff)
 		.tap -> processingTime = new Date()
 		.then (body) ->
 			if body
