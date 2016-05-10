@@ -33,7 +33,7 @@ module.exports = class
 		@previousRss = currentRss
 		Promise.bind @
 		.then -> @Repositories.find().limit(@limit).skip(@skip)
-		.map @handleRepository
+		.map @handleRepository, {concurrency: 1}
 		.then (results) ->
 			@skip += @limit
 			if results.length and (not @skipMax or @skipMax >= @skip)
