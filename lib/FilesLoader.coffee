@@ -71,7 +71,7 @@ module.exports = class
 
 	updateFile: (repository, content) ->
 		packages = _.uniq _.union _.keys(content['dependencies'] or {}), _.keys(content['devDependencies'] or {})
-		@Files.upsert
+		@Files.insert @Files.buildObject
 			name: FILE
 			manager: MANAGER
 			url: repository.url
