@@ -15,33 +15,61 @@ module.exports = class
 		@logger = dependencies.logger
 		@Files = new FilesClass(dependencies.mongodb)
 		@Repositories = new RepositoriesClass(dependencies.mongodb)
-		@limit = 100
-		@skip = 0
-		@skipMax = 0
+		@from = 0
+		@to = 0
 		@networkTime = 0
 		@maxNetworkTime = 0
 		@mongoTime = 0
-		@retryOptions =
-			factor: 1
-			minTimeout: 30000
 		@previousRss = process.memoryUsage().rss
 		@maxRss = process.memoryUsage().rss
 
+		@exhausted = false
+		@count = 0
+		@threads = 100
+		@concurrency = @threads
+
+	init: ->
+		@cursor = @Repositories.find({}).limit(@to - @from).skip(@from)
+		# do NOT return the cursor itself (because of its own .then method)!
+		true
+
 	run: ->
-		currentRss = process.memoryUsage().rss
-		@maxRss = Math.max(@maxRss, currentRss)
-		@logger.info "FilesLoader:run", @skip, "(memory @ max: #{parseInt(@maxRss / 1024, 10)} KB, current: #{parseInt(currentRss / 1024, 10)} KB; change: #{if currentRss > @previousRss then "+" else ""}#{parseInt((currentRss - @previousRss) / 1024, 10)} KB)"
-		@previousRss = currentRss
-		Promise.bind @
-		.then -> @Repositories.find().limit(@limit).skip(@skip)
-		.map @handleRepository
-		.then (results) ->
-			@skip += @limit
-			if results.length and (not @skipMax or @skipMax >= @skip)
-				process.nextTick => @run()
-			else
-				@logger.info "FilesLoader:finished. Request time #{@networkTime}ms, processing time #{@mongoTime}ms, max request time #{@maxNetworkTime}"
-				process.exit(0)
+		new Promise (resolve, reject) =>
+			@next(resolve, reject)
+
+	next: (resolve, reject) ->
+		if @concurrency > 0
+			@concurrency--
+
+			Promise.bind @
+			.then -> @cursor.next()
+			.then (repository) ->
+				# cursor returns "null" when exhausted (but only once)
+				if repository
+					# plan next iteration
+					process.nextTick => @next(resolve, reject)
+
+					Promise.bind @
+					.then -> @handleRepository(repository)
+					.then ->
+						@count++
+						if (@count % 10) is 0
+							currentRss = process.memoryUsage().rss
+							@maxRss = Math.max(@maxRss, currentRss)
+							@logger.info "FilesLoader:run", @count, "(memory @ max: #{parseInt(@maxRss / 1024, 10)} KB, current: #{parseInt(currentRss / 1024, 10)} KB; change: #{if currentRss > @previousRss then "+" else ""}#{parseInt((currentRss - @previousRss) / 1024, 10)} KB)"
+							@previousRss = currentRss
+					.then ->
+						@free(resolve)
+						process.nextTick => @next(resolve, reject) if not @exhausted
+				else
+					@exhausted = true
+					@free(resolve)
+
+	free: (resolve) ->
+		@concurrency++
+		if @exhausted and (@concurrency is @threads)
+			@logger.info "FilesLoader:finished. Request time #{@networkTime}ms, processing time #{@mongoTime}ms, max request time #{@maxNetworkTime}"
+			resolve()
 
 	handleRepository: (repository) ->
 		requestTime = undefined

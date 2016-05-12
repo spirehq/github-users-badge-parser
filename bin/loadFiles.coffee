@@ -50,8 +50,12 @@ Packages = new PackagesCollection dependencies.mongodb
 Files = new FilesCollection dependencies.mongodb
 
 loader = new FilesLoader(settings, dependencies)
-loader.skip = argv.from
-loader.skipMax = argv.to
+loader.from = argv.from
+loader.to = argv.to
 
 Promise.join Repositories.init(), Packages.init(), Files.init()
+.then -> loader.init()
 .then -> loader.run()
+.then ->
+  # see http://stackoverflow.com/questions/24045414/node-program-with-promises-doesnt-finish
+   dependencies.mongodb.close()
