@@ -33,6 +33,7 @@ module.exports = class
 
 	init: ->
 		@cursor = @Repositories.find({}).limit(@to - @from).skip(@from)
+		@reportInterval = Math.ceil((@to - @from) / 100)
 		# do NOT return the cursor itself (because of its own .then method)!
 		true
 
@@ -59,7 +60,7 @@ module.exports = class
 					.then -> @handleRepository(repository)
 					.then ->
 						@count++
-						@usage() if (@count % 10) is 0
+						@usage() if (@count % @reportInterval) is 0
 					.finally ->
 						@free(resolve)
 						process.nextTick => @next(resolve, reject) if not @exhausted
