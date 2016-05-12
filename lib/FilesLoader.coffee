@@ -27,7 +27,7 @@ module.exports = class
 			minTimeout: 30000
 
 		@exhausted = false
-		@count = @from
+		@current = @from
 		@threads = 100
 		@concurrency = @threads
 
@@ -59,8 +59,8 @@ module.exports = class
 					Promise.bind @
 					.then -> @handleRepository(repository)
 					.then ->
-						@count++
-						@usage() if (@count % @reportInterval) is 0
+						@current++
+						@usage() if (@current % @reportInterval) is 0
 					.finally ->
 						@free(resolve)
 						process.nextTick => @next(resolve, reject) if not @exhausted
@@ -71,8 +71,17 @@ module.exports = class
 	usage: ->
 		currentRss = process.memoryUsage().rss
 		@maxRss = Math.max(@maxRss, currentRss)
-		@logger.info "FilesLoader:run", "#{@count}/#{@to}", "(memory @ max: #{parseInt(@maxRss / 1024, 10)} KB, current: #{parseInt(currentRss / 1024, 10)} KB; change: #{if currentRss > @previousRss then "+" else ""}#{parseInt((currentRss - @previousRss) / 1024, 10)} KB)"
+		@logger.info "FilesLoader:run", "#{@current}/#{@to}", "(memory @ max: #{parseInt(@maxRss / 1024, 10)} KB, current: #{parseInt(currentRss / 1024, 10)} KB; change: #{if currentRss > @previousRss then "+" else ""}#{parseInt((currentRss - @previousRss) / 1024, 10)} KB)"
 		@previousRss = currentRss
+
+		completed = (@current - @begin) / (@end - @begin)
+		timeSpent = new Date().getTime() - @timestamp
+
+		estimated = timeSpent / completed - timeSpent
+		seconds = Math.floor(estimated / 1000) % 60
+		minutes = Math.floor(estimated / 1000 / 60) % 60
+		hours = Math.floor(estimated / 1000 / 60 / 60) % 60
+		@logger.info "Estimated time: #{hours}h #{minutes}m #{seconds}s"
 
 	free: (resolve) ->
 		@concurrency++

@@ -30,6 +30,24 @@ argv = yargs
       description: "To MongoDB `skip` parameter"
       demand: false
       default: 0
+    "S":
+      alias: "startedAt"
+      type: "number"
+      description: "UNIX timestamp (for statistics)"
+      demand: false
+      default: new Date().getTime()
+    "b":
+      alias: "begin"
+      type: "number"
+      description: "Start of range (for statistics)"
+      demand: false
+      default: 0
+    "e":
+      alias: "end"
+      type: "number"
+      description: "End of range (for statistics)"
+      demand: false
+      default: 1
   )
   .strict()
   .argv
@@ -52,6 +70,9 @@ Files = new FilesCollection dependencies.mongodb
 loader = new FilesLoader(settings, dependencies)
 loader.from = argv.from
 loader.to = argv.to
+loader.timestamp = new Date(argv.startedAt)
+loader.begin = argv.begin
+loader.end = argv.end
 
 Promise.join Repositories.init(), Packages.init(), Files.init()
 .then -> loader.init()
