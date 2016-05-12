@@ -44,9 +44,9 @@ module.exports = class
 			Promise.bind @
 			.then -> @cursor.next()
 			.then (repository) ->
-				# cursor returns "null" when exhausted (but only once)
+				# cursor returns "undefined" when exhausted (but only once)
 				if repository
-					# plan next iteration
+					# plan the next iteration
 					process.nextTick => @next(resolve, reject)
 
 					Promise.bind @
