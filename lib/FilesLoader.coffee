@@ -53,7 +53,7 @@ module.exports = class
 					.then -> @handleRepository(repository)
 					.then ->
 						@count++
-						if (@count % 10) is 0
+						if (@count % 1000) is 0
 							currentRss = process.memoryUsage().rss
 							@maxRss = Math.max(@maxRss, currentRss)
 							@logger.info "FilesLoader:run", @count, "(memory @ max: #{parseInt(@maxRss / 1024, 10)} KB, current: #{parseInt(currentRss / 1024, 10)} KB; change: #{if currentRss > @previousRss then "+" else ""}#{parseInt((currentRss - @previousRss) / 1024, 10)} KB)"
