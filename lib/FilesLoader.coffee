@@ -16,15 +16,18 @@ module.exports = class
 		@Files = new FilesClass(dependencies.mongodb)
 		@Repositories = new RepositoriesClass(dependencies.mongodb)
 		@from = 0
-		@to = 0
+		@to = 1
 		@networkTime = 0
 		@maxNetworkTime = 0
 		@mongoTime = 0
 		@previousRss = process.memoryUsage().rss
 		@maxRss = process.memoryUsage().rss
+		@retryOptions =
+			factor: 1
+			minTimeout: 30000
 
 		@exhausted = false
-		@count = 0
+		@count = @from
 		@threads = 100
 		@concurrency = @threads
 
@@ -42,7 +45,10 @@ module.exports = class
 			@concurrency--
 
 			Promise.bind @
-			.then -> @cursor.next()
+			.then ->
+				@cursor.next()
+				.catch (error) ->
+					throw error if error.message isnt "cursor is exhausted"
 			.then (repository) ->
 				# cursor returns "undefined" when exhausted (but only once)
 				if repository
@@ -53,18 +59,18 @@ module.exports = class
 					.then -> @handleRepository(repository)
 					.then ->
 						@count++
-						@report if (@count % 1000) is 0
-					.then ->
+						@usage() if (@count % 10) is 0
+					.finally ->
 						@free(resolve)
 						process.nextTick => @next(resolve, reject) if not @exhausted
 				else
 					@exhausted = true
 					@free(resolve)
 
-	@report: ->
+	usage: ->
 		currentRss = process.memoryUsage().rss
 		@maxRss = Math.max(@maxRss, currentRss)
-		@logger.info "FilesLoader:run", @count, "(memory @ max: #{parseInt(@maxRss / 1024, 10)} KB, current: #{parseInt(currentRss / 1024, 10)} KB; change: #{if currentRss > @previousRss then "+" else ""}#{parseInt((currentRss - @previousRss) / 1024, 10)} KB)"
+		@logger.info "FilesLoader:run", "#{@count}/#{@to}", "(memory @ max: #{parseInt(@maxRss / 1024, 10)} KB, current: #{parseInt(currentRss / 1024, 10)} KB; change: #{if currentRss > @previousRss then "+" else ""}#{parseInt((currentRss - @previousRss) / 1024, 10)} KB)"
 		@previousRss = currentRss
 
 	free: (resolve) ->
@@ -87,7 +93,10 @@ module.exports = class
 				@parse body
 				.then (json) =>
 					if json
-						@updateFile(repository, json)
+						promiseRetry (retry, number) =>
+							@updateFile(repository, json)
+							.catch (error) ->
+								retry(error)
 		.catch (error) ->
 			@logger.error error.message, _.extend({stack: error.stack}, error.details)
 			process.exit(1) # to catch and retry from outside
