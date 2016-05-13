@@ -53,7 +53,7 @@ module.exports = class
 					@cursor.next()
 					.catch (error) ->
 						throw error if error.message isnt "cursor is exhausted"
-					.finally -> @lock = false
+				.finally -> @lock = false
 				.then (repository) ->
 					# cursor returns "undefined" when exhausted (but only once)
 					if repository
