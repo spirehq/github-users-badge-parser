@@ -84,7 +84,7 @@ module.exports = class
 		estimated = timeSpent / completed - timeSpent
 		seconds = Math.floor(estimated / 1000) % 60
 		minutes = Math.floor(estimated / 1000 / 60) % 60
-		hours = Math.floor(estimated / 1000 / 60 / 60) % 60
+		hours = Math.floor(estimated / 1000 / 60 / 60)
 		@logger.info "Estimated time: #{hours}h #{minutes}m #{seconds}s (current: #{@current}, begin: #{@begin}, completed: #{completed}, timeSpent:#{timeSpent}), estimated:#{estimated}"
 
 	free: (resolve) ->
