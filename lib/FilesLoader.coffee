@@ -27,7 +27,6 @@ module.exports = class
 			minTimeout: 30000
 
 		@exhausted = false
-		@current = @from
 		@threads = 100
 		@concurrency = @threads
 		@lock = false
@@ -35,6 +34,7 @@ module.exports = class
 	init: ->
 		@cursor = @Repositories.find({}).limit(@to - @from).skip(@from)
 		@reportInterval = Math.ceil((@to - @from) / 100 / 10)  # every 0.1%
+		@current = @from
 		# do NOT return the cursor itself (because of its own .then method)!
 		true
 
