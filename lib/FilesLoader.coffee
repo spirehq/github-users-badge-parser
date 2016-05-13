@@ -34,7 +34,7 @@ module.exports = class
 
 	init: ->
 		@cursor = @Repositories.find({}).limit(@to - @from).skip(@from)
-		@reportInterval = Math.ceil((@to - @from) / 100)
+		@reportInterval = Math.ceil((@to - @from) / 100 / 10)  # every 0.1%
 		# do NOT return the cursor itself (because of its own .then method)!
 		true
 
