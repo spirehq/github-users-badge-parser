@@ -6,7 +6,7 @@ MIN=$1
 MAX=$2
 SETTINGS=$3
 STEP=500000
-STARTED_AT=`date +%s`
+STARTED_AT=`date +%s%3N`
 
 while [ $CURRENT -lt $MAX ]
 do
