@@ -22,14 +22,12 @@ argv = yargs
       alias: "from"
       type: "number"
       description: "From MongoDB `skip` parameter"
-      demand: false
-      default: 0
+      demand: true
     "t":
       alias: "to"
       type: "number"
       description: "To MongoDB `skip` parameter"
-      demand: false
-      default: 0
+      demand: true
     "S":
       alias: "startedAt"
       type: "number"
@@ -41,16 +39,17 @@ argv = yargs
       type: "number"
       description: "Start of range (for statistics)"
       demand: false
-      default: 0
     "e":
       alias: "end"
       type: "number"
       description: "End of range (for statistics)"
       demand: false
-      default: 1
   )
   .strict()
   .argv
+
+argv.begin ?= argv.from
+argv.end ?= argv.to
 
 settings = settingsLoader path.resolve(process.cwd(), argv.settings)
 
@@ -70,13 +69,16 @@ Files = new FilesCollection dependencies.mongodb
 loader = new FilesLoader(settings, dependencies)
 loader.from = argv.from
 loader.to = argv.to
-loader.timestamp = new Date(argv.startedAt)
+loader.startedAt = argv.startedAt
 loader.begin = argv.begin
 loader.end = argv.end
 
 Promise.join Repositories.init(), Packages.init(), Files.init()
 .then -> loader.init()
 .then -> loader.run()
+.finally -> console.log "close"; dependencies.mongodb.close() # see http://stackoverflow.com/questions/24045414/node-program-with-promises-doesnt-finish
 .then ->
-  # see http://stackoverflow.com/questions/24045414/node-program-with-promises-doesnt-finish
-   dependencies.mongodb.close()
+  process.exit(0) # necessary to kill
+.catch (error) ->
+  dependencies.logger.error error.message, _.extend({stack: error.stack}, error.details)
+  process.exit(1)
