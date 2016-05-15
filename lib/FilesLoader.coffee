@@ -212,5 +212,5 @@ module.exports = class
 			iterate = ->
 				if !condition()
 					return resolve()
-				action().then(iterate).catch(reject)
-			process.nextTick iterate
+				action().catch(reject).then(-> process.nextTick(iterate))
+			process.nextTick(iterate)
