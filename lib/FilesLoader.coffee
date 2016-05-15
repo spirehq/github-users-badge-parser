@@ -29,7 +29,6 @@ module.exports = class
 		@exhausted = false
 		@threads = 100
 		@concurrency = @threads
-		@lock = false
 
 	init: ->
 		@cursor = @Repositories.find({}).limit(@to - @from).skip(@from)
@@ -46,31 +45,28 @@ module.exports = class
 		if @concurrency > 0
 			@concurrency--
 
-			if not @lock
-				Promise.bind @
-				.tap -> @lock = true
-				.then ->
-					@cursor.next()
-					.catch (error) ->
-						throw error if error.message isnt "cursor is exhausted"
-				.finally -> @lock = false
-				.then (repository) ->
-					# cursor returns "undefined" when exhausted (but only once)
-					if repository
-						# plan the next iteration
-						process.nextTick => @next(resolve, reject)
+			Promise.bind @
+			.then ->
+				@cursor.next()
+				.catch (error) ->
+					throw error if error.message isnt "cursor is exhausted"
+			.then (repository) ->
+				# cursor returns "undefined" when exhausted (but only once)
+				if repository
+					# plan the next iteration
+					process.nextTick => @next(resolve, reject)
 
-						Promise.bind @
-						.then -> @handleRepository(repository)
-						.then ->
-							@current++
-							@usage() if (@current % @reportInterval) is 0
-						.finally ->
-							@free(resolve)
-							process.nextTick => @next(resolve, reject) if not @exhausted
-					else
-						@exhausted = true
+					Promise.bind @
+					.then -> @handleRepository(repository)
+					.then ->
+						@current++
+						@usage() if (@current % @reportInterval) is 0
+					.finally ->
 						@free(resolve)
+						process.nextTick => @next(resolve, reject) if not @exhausted
+				else
+					@exhausted = true
+					@free(resolve)
 
 	usage: ->
 		currentRss = process.memoryUsage().rss
