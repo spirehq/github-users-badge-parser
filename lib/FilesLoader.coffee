@@ -5,6 +5,10 @@ FilesClass = require './model/Files.coffee'
 RepositoriesClass = require './model/Repositories.coffee'
 _ = require 'underscore'
 promiseRetry = require 'promise-retry'
+sprintf = require("sprintf-js").sprintf
+
+moment = require "moment"
+require "moment-duration-format"
 
 FILE = 'package.json'
 MANAGER = 'npm'
@@ -17,87 +21,119 @@ module.exports = class
 		@Repositories = new RepositoriesClass(dependencies.mongodb)
 		@from = 0
 		@to = 1
+		@networkCounter = 0
 		@networkTime = 0
 		@maxNetworkTime = 0
+		@mongoCounter = 0
 		@mongoTime = 0
+		@maxMongoTime = 0
 		@previousRss = process.memoryUsage().rss
 		@maxRss = process.memoryUsage().rss
 		@retryOptions =
 			factor: 1
 			minTimeout: 30000
+		@pollingInterval = 50 # ms
 
+		@repositories = [] # filled in init()
 		@exhausted = false
-		@threads = 100
-		@concurrency = @threads
 
 	init: ->
+		@repositories = (null for i in [0..(Math.min(100, @to - @from) - 1)]) # 100 null's
 		@cursor = @Repositories.find({}).limit(@to - @from).skip(@from)
-		@reportInterval = Math.ceil((@to - @from) / 100 / 10)  # every 0.1%
+		@reportInterval = Math.ceil((@to - @from) / 100 / 10)	# every 0.1%
 		@current = @from
 		# do NOT return the cursor itself (because of its own .then method)!
 		true
 
 	run: ->
-		new Promise (resolve, reject) =>
-			@next(resolve, reject)
+		Promise.bind(@)
+		.then -> @logger.info "FilesLoader:started"
+		.then ->
+			new Promise (resolve, reject) =>
+				process.nextTick => @initRepositoryLoader().catch(reject)
+				process.nextTick => @initFileLoaderThreads().catch(reject)
+				process.nextTick => @initExitConditionChecker().then(resolve).catch(reject) # needed to call "resolve"
+		.then -> @logger.info "FilesLoader:finished", "(request time: #{@networkTime}ms, processing time: #{@mongoTime}ms, max request time: #{@maxNetworkTime}ms)"
 
-	next: (resolve, reject) ->
-		if @concurrency > 0
-			@concurrency--
+	initRepositoryLoader: ->
+		@while(
+			(=> @shouldRun() and not @exhausted),
+			(=> @loadRepositories().delay(@pollingInterval))
+		)
 
-			Promise.bind @
-			.then ->
-				@cursor.next()
-				.catch (error) ->
-					throw error if error.message isnt "cursor is exhausted"
-			.then (repository) ->
-				# cursor returns "undefined" when exhausted (but only once)
-				if repository
-					# plan the next iteration
-					process.nextTick => @next(resolve, reject)
+	loadRepositories: ->
+#		console.log "loadRepositories"
+		@while(
+			(=> @shouldRun() and not @exhausted and ~@repositories.indexOf(null)), # extra "not @exhausted" condition is necessary if there are less than 100 repositories in DB
+			(=> @loadRepository())
+		)
 
-					Promise.bind @
-					.then -> @handleRepository(repository)
-					.then ->
-						@current++
-						@usage() if (@current % @reportInterval) is 0
-					.finally ->
-						@free(resolve)
-						process.nextTick => @next(resolve, reject) if not @exhausted
+	loadRepository: ->
+#		console.log "loadRepository"
+		Promise.bind @
+		.then -> @cursor.next()
+#		.tap -> console.log "cursor.next"
+		# race condition here. Two process.nextTick callbacks may call next, which will result in two cursor.next calls
+		# true solution: don't call .next() until the previous one had finished; but that's not possible, because .next() returns a promise
+		# need sync "dealing" of next objects
+		.then (repository) ->
+			# cursor returns "undefined" when exhausted (but only once)
+			if repository
+				index = @repositories.indexOf(null)
+#				console.log "Loaded #{repository._id} at #{index}"
+				if ~index
+					@repositories[index] = repository
 				else
-					@exhausted = true
-					@free(resolve)
+					error = new Error("FilesLoader:loadRepositories:indexNotFound")
+					error.details =
+						index: index
+						repositories: @repositories
+					throw error
+			else
+				@exhausted = true
+				console.log @repositories.length
+				console.log "@exhausted = true"
+
+	initFileLoaderThreads: ->
+		Promise.map(
+			[0..(@repositories.length - 1)],
+			(index) =>
+				@while(
+					(=> @shouldRun()),
+					(=> @loadFile(index).delay(@pollingInterval))
+				)
+		)
+
+	loadFile: (index) ->
+#		console.log "loadFile at #{index}"
+		return Promise.bind(@) if not @repositories[index] # it's possible for loadFile to be called before loadRepositories
+		Promise.bind(@)
+		.then -> @handleRepository(@repositories[index])
+		.then ->
+			@current++
+			@usage() if (@current % @reportInterval) is 0
+			@repositories[index] = null
 
 	usage: ->
 		currentRss = process.memoryUsage().rss
 		@maxRss = Math.max(@maxRss, currentRss)
-		@logger.info "FilesLoader:run", "#{@current}/#{@to}", "(memory @ max: #{parseInt(@maxRss / 1024, 10)} KB, current: #{parseInt(currentRss / 1024, 10)} KB; change: #{if currentRss > @previousRss then "+" else ""}#{parseInt((currentRss - @previousRss) / 1024, 10)} KB)"
-		@previousRss = currentRss
 
 		completed = (@current - @begin) / (@end - @begin)
-		timeSpent = new Date().getTime() - @timestamp
+		timeSpent = new Date().getTime() - @startedAt
+		estimatedFinishedAt = timeSpent / completed - timeSpent
 
-		estimated = timeSpent / completed - timeSpent
-		seconds = Math.floor(estimated / 1000) % 60
-		minutes = Math.floor(estimated / 1000 / 60) % 60
-		hours = Math.floor(estimated / 1000 / 60 / 60)
-		@logger.info "Estimated time: #{hours}h #{minutes}m #{seconds}s (current: #{@current}, begin: #{@begin}, completed: #{completed}, timeSpent:#{timeSpent}), estimated:#{estimated}"
-
-	free: (resolve) ->
-		@concurrency++
-		if @exhausted and (@concurrency is @threads)
-			@logger.info "FilesLoader:finished. Request time #{@networkTime}ms, processing time #{@mongoTime}ms, max request time #{@maxNetworkTime}"
-			resolve()
+		@logger.info "FilesLoader:run", "#{@current}/#{@to}", "finishing in #{moment.duration(estimatedFinishedAt).format("h[h] mm[m] ss[s]")}", "(network time @ mean: #{parseInt(@networkTime / @networkCounter, 10)}ms, max: #{@maxNetworkTime}ms; mongo time @ mean: #{parseInt(@mongoTime / @mongoCounter, 10)}ms, max: #{@maxMongoTime}ms; current: #{@current}, begin: #{@begin}, end: #{@end}, completed: #{sprintf("%.2f", completed * 100)}%, timeSpent: #{moment.duration(timeSpent).format("h[h] mm[m] ss[s]")}, memory: #{parseInt(currentRss / 1024, 10)} / #{parseInt(@maxRss / 1024, 10)} KB)"
+		@previousRss = currentRss
 
 	handleRepository: (repository) ->
-		requestTime = undefined
-		processingTime = undefined
+		networkStartedAt = undefined
+		mongoStartedAt = undefined
 
 		Promise.bind @
-		.tap -> requestTime = new Date()
+		.tap -> networkStartedAt = new Date()
 		.then -> @_getPackageFile repository
-		.tap -> diff = new Date() - requestTime; @networkTime += diff; @maxNetworkTime = Math.max(@maxNetworkTime, diff)
-		.tap -> processingTime = new Date()
+		.tap -> diff = new Date() - networkStartedAt; @networkTime += diff; @maxNetworkTime = Math.max(@maxNetworkTime, diff); @networkCounter++
+		.tap -> mongoStartedAt = new Date()
 		.then (body) ->
 			if body
 				@parse body
@@ -110,13 +146,13 @@ module.exports = class
 		.catch (error) ->
 			@logger.error error.message, _.extend({stack: error.stack}, error.details)
 			process.exit(1) # to catch and retry from outside
-		.tap -> @mongoTime += new Date() - processingTime
+		.tap -> diff = new Date() - mongoStartedAt; @mongoTime += diff; @maxMongoTime = Math.max(@maxMongoTime, diff); @mongoCounter++
 		.thenReturn(true)
 
 	parse: (body) ->
 		body = body.replace(/,(\s*)(]|})/g, '$1$2') # fix trailing comma for arrays/objects (unable to parse it!)
 		Promise.try -> JSON.parse body
-		.catch (error) => @logger.warn "FilesLoader:parse:invalidJSON", {body: body}
+		.catch (error) => # swallow the error # @logger.warn "FilesLoader:parse:invalidJSON", {body: body}
 
 	updateFile: (repository, content) ->
 		packages = _.uniq _.union _.keys(content['dependencies'] or {}), _.keys(content['devDependencies'] or {})
@@ -161,3 +197,20 @@ module.exports = class
 						headers: response.headers
 						body: body
 					throw error
+
+	initExitConditionChecker: ->
+		@while(
+			(=> @shouldRun()),
+			(=> Promise.delay(500))
+		)
+
+	shouldRun: ->
+		not @exhausted or _.without(@repositories, null).length
+
+	while: (condition, action) ->
+		new Promise (resolve, reject) =>
+			iterate = ->
+				if !condition()
+					return resolve()
+				action().catch(reject).then(-> process.nextTick(iterate))
+			process.nextTick(iterate)
