@@ -66,7 +66,7 @@ module.exports = class
 		timeSpent = new Date().getTime() - @startedAt
 		estimatedFinishedAt = timeSpent / completed - timeSpent
 
-		@logger.info "FilesLoader:run", "#{@current}/#{@to}", "finishing in #{moment.duration(estimatedFinishedAt).format("h[h] mm[m] ss[s]")}", "mongo time @ mean: #{parseInt(@mongoTime / @mongoCounter, 10)}ms, max: #{@maxMongoTime}ms; current: #{@current}, begin: #{@begin}, end: #{@end}, completed: #{sprintf("%.2f", completed * 100)}%, timeSpent: #{moment.duration(timeSpent).format("h[h] mm[m] ss[s]")}, memory: #{parseInt(currentRss / 1024, 10)} / #{parseInt(@maxRss / 1024, 10)} KB)"
+		@logger.info "FilesLoader:run", "#{@current}/#{@to}", "finishing in #{moment.duration(estimatedFinishedAt).format("h[h] mm[m] ss[s]")}", "completed: #{sprintf("%.2f", completed * 100)}%, timeSpent: #{moment.duration(timeSpent).format("h[h] mm[m] ss[s]")}, memory: #{parseInt(currentRss / 1024, 10)} / #{parseInt(@maxRss / 1024, 10)} KB)"
 
 	parse: (link) ->
 		# filter exceptional cases
