@@ -3,7 +3,7 @@ __ = require 'lodash'
 Promise = require 'bluebird'
 requestAsync = Promise.promisify((require "request"), {multiArgs: true})
 PackagesClass = require '../model/Packages.coffee'
-
+promiseRetry = require 'promise-retry'
 sprintf = require("sprintf-js").sprintf
 moment = require "moment"
 require "moment-duration-format"
@@ -43,19 +43,22 @@ module.exports = class
 		Promise.bind @
 		.return _.pluck chunk, 'key'
 		.map @handlePackage, {concurrency: 5}
-		.tap -> @counter += @chunkSize; @logger.verbose "Chunk has been managed #{@counter}/#{@overall}"
+		.tap -> @counter += @chunkSize
 		.tap @usage
 
 	handlePackage: (key) ->
-		Promise.bind @
-		.then -> @registry.getAsync(key)
-		.then (object) ->
-			name = object.name
-			return if not name # don't even try to handle entries with no names
-			link = object.repository?.url
-			url = @parse link if link
-			@save name, url
-		.tap -> @logger.log "Package #{key}"
+		promiseRetry (retry, number) =>
+			Promise.bind @
+			.then -> @registry.getAsync(key)
+			.then (object) ->
+				name = object.name
+				return if not name # don't even try to handle entries with no names
+				link = object.repository?.url
+				url = @parse link if link
+				@save name, url
+			.tap -> @logger.log "Package #{key}"
+			.catch (error) ->
+				retry(error)
 
 	usage: ->
 		currentRss = process.memoryUsage().rss
@@ -66,7 +69,7 @@ module.exports = class
 		timeSpent = new Date().getTime() - @startedAt
 		estimatedFinishedAt = timeSpent / completed - timeSpent
 
-		@logger.info "FilesLoader:run", "#{@current}/#{@to}", "finishing in #{moment.duration(estimatedFinishedAt).format("h[h] mm[m] ss[s]")}", "completed: #{sprintf("%.2f", completed * 100)}%, timeSpent: #{moment.duration(timeSpent).format("h[h] mm[m] ss[s]")}, memory: #{parseInt(currentRss / 1024, 10)} / #{parseInt(@maxRss / 1024, 10)} KB)"
+		@logger.info "FilesLoader:run", "#{@counter}/#{@overall}", "finishing in #{moment.duration(estimatedFinishedAt).format("h[h] mm[m] ss[s]")}", "completed: #{sprintf("%.2f", completed * 100)}%, timeSpent: #{moment.duration(timeSpent).format("h[h] mm[m] ss[s]")}, memory: #{parseInt(currentRss / 1024, 10)} / #{parseInt(@maxRss / 1024, 10)} KB)"
 
 	parse: (link) ->
 		# filter exceptional cases
