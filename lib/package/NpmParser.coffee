@@ -4,6 +4,10 @@ Promise = require 'bluebird'
 requestAsync = Promise.promisify((require "request"), {multiArgs: true})
 PackagesClass = require '../model/Packages.coffee'
 
+sprintf = require("sprintf-js").sprintf
+moment = require "moment"
+require "moment-duration-format"
+
 MANAGER = 'npm'
 
 module.exports = class
@@ -23,6 +27,9 @@ module.exports = class
 		Promise.bind @
 		.then @replicate
 		.tap -> @logger.verbose "CouchDB #{@settings.database} has been replicated"
+#		.then -> @registry.viewAsync("badge", "list", {limit: 10, start_key: '"003"'})
+#		.then (result) -> console.log result.rows
+		.tap -> @startedAt = new Date()
 		.then -> @registry.listAsync()
 		.then (body) -> body.rows
 		.tap (rows) -> @overall = rows.length
@@ -34,14 +41,10 @@ module.exports = class
 
 	handleChunk: (chunk) ->
 		Promise.bind @
-		.tap ->
-			currentRss = process.memoryUsage().rss
-			@maxRss = Math.max(@maxRss, currentRss)
-			@logger.verbose "(memory @ max: #{parseInt(@maxRss / 1024, 10)} KB, current: #{parseInt(currentRss / 1024, 10)} KB; change: #{if currentRss > @previousRss then "+" else ""}#{parseInt((currentRss - @previousRss) / 1024, 10)} KB)"
-			@previousRss = currentRss
 		.return _.pluck chunk, 'key'
 		.map @handlePackage, {concurrency: 5}
 		.tap -> @counter += @chunkSize; @logger.verbose "Chunk has been managed #{@counter}/#{@overall}"
+		.tap @usage
 
 	handlePackage: (key) ->
 		Promise.bind @
@@ -53,6 +56,17 @@ module.exports = class
 			url = @parse link if link
 			@save name, url
 		.tap -> @logger.log "Package #{key}"
+
+	usage: ->
+		currentRss = process.memoryUsage().rss
+		@maxRss = Math.max(@maxRss, currentRss)
+		@previousRss = currentRss
+
+		completed = @counter / @overall
+		timeSpent = new Date().getTime() - @startedAt
+		estimatedFinishedAt = timeSpent / completed - timeSpent
+
+		@logger.info "FilesLoader:run", "#{@current}/#{@to}", "finishing in #{moment.duration(estimatedFinishedAt).format("h[h] mm[m] ss[s]")}", "mongo time @ mean: #{parseInt(@mongoTime / @mongoCounter, 10)}ms, max: #{@maxMongoTime}ms; current: #{@current}, begin: #{@begin}, end: #{@end}, completed: #{sprintf("%.2f", completed * 100)}%, timeSpent: #{moment.duration(timeSpent).format("h[h] mm[m] ss[s]")}, memory: #{parseInt(currentRss / 1024, 10)} / #{parseInt(@maxRss / 1024, 10)} KB)"
 
 	parse: (link) ->
 		# filter exceptional cases
