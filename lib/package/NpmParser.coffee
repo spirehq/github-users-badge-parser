@@ -56,8 +56,8 @@ module.exports = class
 				link = object.repository?.url
 				url = @parse link if link
 				@save name, url
-			.tap -> @logger.log "Package #{key}"
 			.catch (error) ->
+				@logger.error error.message, _.extend({stack: error.stack}, error.details)
 				retry(error)
 
 	usage: ->
