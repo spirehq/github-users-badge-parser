@@ -40,7 +40,7 @@ module.exports = class
 
 		now = new Date()
 
-		url: data.html_url
+		url: data.html_url.toLowerCase()
 		users: 0
 		createdAt: now
 		updatedAt: now
