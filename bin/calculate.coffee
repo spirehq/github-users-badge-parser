@@ -24,7 +24,7 @@ argv = yargs
 
 settings = settingsLoader path.resolve(process.cwd(), argv.settings)
 
-Calculator = require '../lib/Calculator.coffee'
+Calculator = require '../lib/CalculatorNpmOnly.coffee'
 RepositoriesCollection = require '../lib/model/Repositories.coffee'
 PackagesCollection = require '../lib/model/Packages.coffee'
 FilesCollection = require '../lib/model/Files.coffee'

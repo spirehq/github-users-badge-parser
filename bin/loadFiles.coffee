@@ -73,7 +73,7 @@ loader.startedAt = argv.startedAt
 loader.begin = argv.begin
 loader.end = argv.end
 
-Promise.join Repositories.init(), Packages.init(), Files.init()
+Promise.join Repositories.init(), Packages.init()#, Files.init() DO NOT CREATE INDEX FOR Files Collection here!
 .then -> loader.init()
 .then -> loader.run()
 .finally -> console.log "close"; dependencies.mongodb.close() # see http://stackoverflow.com/questions/24045414/node-program-with-promises-doesnt-finish

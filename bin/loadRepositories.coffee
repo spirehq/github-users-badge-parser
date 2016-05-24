@@ -62,5 +62,5 @@ loader = new RepositoriesLoader(settings, dependencies,
 #  to: argv.to
 )
 
-Promise.join Repositories.init(), Packages.init(), Files.init()
+Promise.join Repositories.init(), Packages.init()#, Files.init() DO NOT CREATE INDEX FOR Files Collection here!
 .then -> loader.run()
