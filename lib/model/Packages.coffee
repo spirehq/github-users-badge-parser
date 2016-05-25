@@ -21,7 +21,7 @@ module.exports = class
 		@collection.insert object
 
 	update: (object) ->
-		@collection.update @_getSelector(object), {$set: {url: object.url, updatedAt: new Date()}}
+		@collection.update @_getSelector(object), {$set: {priority: object.priority, url: object.url, updatedAt: new Date()}}
 
 	findByObject: (object) ->
 		@collection.findOne @_getSelector object
@@ -33,10 +33,14 @@ module.exports = class
 		Match.check data, Match.ObjectIncluding
 			name: String
 			manager: String
+			priority: Match.Optional Number
 #			url: Match.Optional String
 
 		now = new Date()
 
-		_.extend _.pick(data, 'name', 'manager', 'url'),
+		object = _.defaults _.pick(data, 'name', 'manager', 'url', 'priority'),
+			priority: 0
+
+		_.extend object,
 			createdAt: now
 			updatedAt: now

@@ -55,10 +55,15 @@ module.exports = class
 				return if not name # don't even try to handle entries with no names
 				link = object.repository?.url
 				url = @parse link if link
-				@save name, url
+				priority = @calculatePriority object
+				@save name, url, priority
 			.catch (error) ->
 				@logger.error error.message, _.extend({stack: error.stack}, error.details)
 				retry(error)
+
+	# it would be great to compare by number of downloads but this information is not available
+	calculatePriority: (object) ->
+		object['contributors']?.length or 0
 
 	usage: ->
 		currentRss = process.memoryUsage().rss
@@ -104,9 +109,10 @@ module.exports = class
 		generic = new RegExp("^(http|https|ftp)\://([a-zA-Z0-9\.\-]+(\:[a-zA-Z0-9\.&amp;%\$\-]+)*@)*((25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9])\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9]|0)\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9]|0)\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[0-9])|([a-zA-Z0-9\-]+\.)*[a-zA-Z0-9\-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{2}))(\:[0-9]+)*(/($|[a-zA-Z0-9\.\,\?\'\\\+&amp;%\$#\=~_\-]+))*$").test url
 		nonIP and generic
 
-	save: (name, url) ->
+	save: (name, url, priority) ->
 		object = {name}
 		object.url = url if url
+		object.priority = priority
 		return @savePackage object
 
 		# or
