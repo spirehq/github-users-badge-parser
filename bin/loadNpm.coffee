@@ -6,6 +6,8 @@ createDependencies = require "../helper/dependencies"
 settingsLoader = require "../core/helper/settings"
 createSignalHandler = require "../helper/signal"
 NpmParser = require '../lib/package/NpmParser.coffee'
+PackagesCollection = require '../lib/model/Packages.coffee'
+Promise = require 'bluebird'
 
 argv = yargs
 .usage('Usage: $0 [options]')
@@ -24,8 +26,17 @@ dependencies = createDependencies(settings, 'badge')
 
 createSignalHandler("NpmParser", dependencies)
 
+# ensureIndex
+Packages = new PackagesCollection dependencies.mongodb
+
 parser = new NpmParser(dependencies, settings.couchdb)
-parser.run()
+Promise.bind @
+.then -> Packages.drop()
+.tap -> dependencies.logger.verbose "Collection Packages has been dropped"
+.then -> parser.run()
+.tap -> dependencies.logger.verbose "Parsing has been finished"
+.then -> Packages.buildIndex()
+.tap -> dependencies.logger.verbose "Index for collection Packages has been built"
 .then ->
 	dependencies.logger.verbose "LoadNpm is finished"
 	

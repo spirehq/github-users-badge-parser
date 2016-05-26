@@ -7,9 +7,15 @@ module.exports = class
 		@mongodb = mongodb
 		@collection = mongodb.collection("Packages")
 
+	drop: ->
+		@collection.drop()
+		
 	init: ->
-		@collection.ensureIndex {url: 1, manager: 1}
+		console.warn "Deprecated call! Delete Packages.init()"
 
+	buildIndex: ->
+		@collection.ensureIndex {url: 1, manager: 1}
+		
 	upsert: (raw) ->
 		object = @buildObject raw
 

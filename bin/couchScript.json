@@ -1,0 +1,7 @@
+{
+  "views": {
+    "list": {
+      "map": "function (doc) { var repository = {}; if (doc.repository) {repository.url = doc.repository.url}; if (doc.contributors) {repository.priority = doc.contributors.length}; emit(doc._id, repository) }"
+    }
+  }
+}
